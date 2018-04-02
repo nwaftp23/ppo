@@ -163,7 +163,7 @@ def discount(x, gamma):
     return scipy.signal.lfilter([1.0], [1.0, -gamma], x[::-1])[::-1]
 
 
-def add_disc_sum_rew(trajectories, gamma):
+def add_disc_sum_rew(trajectories, gamma, mu, sig):
     """ Adds discounted sum of rewards to all time steps of all trajectories
 
     Args:
@@ -177,14 +177,19 @@ def add_disc_sum_rew(trajectories, gamma):
 		#Ideas for new scaling, why using gamma. Just set
 		#a pre determined factor like 0.01, can tray a few
 		#also try a normalization like suggested in the paper
-		#rewards = trajectory['rewards']*self.
-        if gamma < 0.999:  # don't scale for gamma ~= 1
-            rewards = trajectory['rewards'] * (1 - gamma)
-        else:
-            rewards = trajectory['rewards']
+		'''Original Scaling'''
+        #if gamma < 0.999:  # don't scale for gamma ~= 1
+        #    rewards = trajectory['rewards'] * (1 - gamma)
+        #else:
+        #    rewards = trajectory['rewards']
+        '''0 mean 1 variance scaling'''
+        rewards = normalize_rew(trajectory, mu, sig)
         disc_sum_rew = discount(rewards, gamma)
         trajectory['disc_sum_rew'] = disc_sum_rew
 
+def normalize_rew(trajectory, mu, sig):
+    rewards = (trajectory['rewards']-mu)/sig
+    return rewards
 
 def add_value(trajectories, val_func):
     """ Adds estimated value to all time steps of all trajectories
@@ -203,7 +208,7 @@ def add_value(trajectories, val_func):
         trajectory['values'] = values
 
 
-def add_gae(trajectories, gamma, lam):
+def add_gae(trajectories, gamma, lam, mu, sig):
     """ Add generalized advantage estimator.
     https://arxiv.org/pdf/1506.02438.pdf
 
@@ -225,10 +230,13 @@ def add_gae(trajectories, gamma, lam):
     for trajectory in trajectories:
         # Lucas' correction
         # try reward scaling suggested in the paper
-        if gamma < 0.999:  # don't scale for gamma ~= 1
-            rewards = trajectory['rewards'] * (1 - gamma)
-        else:
-            rewards = trajectory['rewards']
+        '''Original Scaling'''
+        #if gamma < 0.999:  # don't scale for gamma ~= 1
+        #    rewards = trajectory['rewards'] * (1 - gamma)
+        #else:
+        #    rewards = trajectory['rewards']
+        '''0 mean 1 variance scaling'''
+        rewards = normalize_rew(trajectory, mu, sig)
         values = trajectory['values']
         # temporal differences
         tds = rewards - values + np.append(values[1:] * gamma, 0)
@@ -298,7 +306,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
     env, obs_dim, act_dim = init_gym(env_name)
     obs_dim += 1  # add 1 to obs dimension for time step feature (see run_episode())
     now = datetime.utcnow().strftime("%b-%d_%H:%M:%S")  # create unique directories
-    logger = Logger(logname=env_name, now=now)
+    logger = Logger(logname=env_name, now=(now.replace(':','_')))
     aigym_path = os.path.join('/tmp', env_name, now)
     #env = wrappers.Monitor(env, aigym_path, force=True)
     scaler = Scaler(obs_dim)
@@ -316,8 +324,8 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         trajectories = run_policy(env, policy, scaler, logger, episodes=batch_size)
         episode += len(trajectories)
         add_value(trajectories, val_func)  # add estimated values to episodes
-        add_disc_sum_rew(trajectories, gamma)  # calculated discounted sum of Rs
-        add_gae(trajectories, gamma, lam)  # calculate advantage
+        add_disc_sum_rew(trajectories, gamma, scaler.mean_rew, scaler.var_rew)  # calculated discounted sum of Rs
+        add_gae(trajectories, gamma, lam, scaler.mean_rew, scaler.var_rew)  # calculate advantage
         disc0 = [t['disc_sum_rew'][0] for t in trajectories]
         # concatenate all episodes into single NumPy arrays
         observes, actions, advantages, disc_sum_rew = build_train_set(trajectories)

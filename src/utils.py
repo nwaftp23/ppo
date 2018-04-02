@@ -27,9 +27,7 @@ class Scaler(object):
         self.mean_rew = 0
         self.var_rew = 0
         self.m = 0
-        self.n = 0
         self.m_rew = 0
-        self.n_rew = 0
         self.first_pass = True
 
     def update(self, x, r):
@@ -50,7 +48,6 @@ class Scaler(object):
             self.first_pass = False
         else:
             n = x.shape[0]
-            print(n)
             new_data_var = np.var(x, axis=0)
             new_data_mean = np.mean(x, axis=0)
             new_data_mean_sq = np.square(new_data_mean)
@@ -61,6 +58,18 @@ class Scaler(object):
             self.vars = np.maximum(0.0, self.vars)  # occasionally goes negative, clip
             self.means = new_means
             self.m += n
+            n_rew = r.shape[0]
+            new_data_var_rew = np.var(r, axis=0)
+            new_data_mean_rew = np.mean(r, axis=0)
+            new_data_mean_sq_rew = np.square(new_data_mean_rew)
+            new_means_rew = ((self.means * self.m) + (new_data_mean * n)) / (self.m + n)
+            self.var_rew = (((self.m_rew * (self.var_rew + np.square(self.mean_rew))) +
+                          (n * (new_data_var_rew + new_data_mean_sq_rew))) / (self.m_rew + n_rew) -
+                         np.square(new_means_rew))
+            self.var_rew = np.maximum(0.0, self.var_rew)  # occasionally goes negative, clip
+            self.mean_rew = new_mean_rew
+            self.m += n_rew
+
 
     def get(self):
         """ returns 2-tuple: (scale, offset) """
