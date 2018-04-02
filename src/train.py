@@ -114,10 +114,10 @@ def run_episode(env, policy, scaler, animate=False):
         rewards.append(reward)
         step += 1e-3  # increment time step feature
         '''bounding the number of steps that can be taken
-         this should be environment specific but it is to 
+         this should be environment specific but it is to
          prevent long episodes'''
         if step == 3:
-    	    done = True     
+    	    done = True
     return (np.concatenate(observes), np.concatenate(actions),
             np.array(rewards, dtype=np.float64), np.concatenate(unscaled_obs))
 
@@ -281,7 +281,7 @@ def log_batch_stats(observes, actions, advantages, disc_sum_rew, logger, episode
                 })
 
 
-def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, policy_logvar,print_results):
+def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, policy_logvar, print_results):
     """ Main training loop
 
     Args:
@@ -368,35 +368,44 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         sum_rewww = [t['rewards'].sum() for t in tr]
         hist_dat = np.array(sum_rewww)
         fig = plt.hist(hist_dat,bins=2000, edgecolor='b', linewidth=1.2)
+        plt.title('Standard PPO')
+        plt.xlabel("Sum of Rewards")
+        plt.ylabel("Frequency")
+        plt.savefig("RA_ppo.png")
+        plt.close(fig)
+    logger.close()
+    policy.close_sess()
+    val_func.close_sess()
 
 
 
 if __name__ == "__main__":
         parser = argparse.ArgumentParser(description=('Train policy on OpenAI Gym environment using Proximal Policy Optimizer'))
-     parser.add_argument('env_name', type=str, help='OpenAI Gym environment name')
-                parser.add_argument('-n', '--num_episodes', type=int, help='Number of episodes to run',
-                                        default=2000)
-                    parser.add_argument('-g', '--gamma', type=float, help='Discount factor', default=0.995)
-                        parser.add_argument('-l', '--lam', type=float, help='Lambda for Generalized Advantage Estimation',
-                                                default=0.98)
-                            parser.add_argument('-k', '--kl_targ', type=float, help='D_KL target value',
-                                                    default=0.003)
-                                parser.add_argument('-r', '--risk_targ', type=float, help='Risk target value or Constraint',
-                                                        default = -40)
-                                    parser.add_argument('-b', '--batch_size', type=int,
-                                                            help='Number of episodes per training batch',
-                                                                                    default=20)
-                                        parser.add_argument('-m', '--hid1_mult', type=int,
-                                                                help='Size of first hidden layer for value and policy NNs'
-                                                                                             '(integer multiplier of observation dimension)',
-                                                                                                                     default=10)
-                                            parser.add_argument('-v', '--policy_logvar', type=float,
-                                                                    help='Initial policy log-variance (natural log of variance)',
-                                                                                            default=-1.0)
-                                                parser.add_argument('-vi', '--visualize', type=bool,
-                                                                        help='Visualize the training (needs to off for sshing).',
-                                                                                                default=False)
+        parser.add_argument('-e','--env_name', type=str, help='OpenAI Gym environment name', default = 'OptimalStop-v0')
+        parser.add_argument('-n', '--num_episodes', type=int, help='Number of episodes to run', default=2000)
+        parser.add_argument('-g', '--gamma', type=float, help='Discount factor', default=0.995)
+        parser.add_argument('-l', '--lam', type=float, help='Lambda for Generalized Advantage Estimation',
+        default=0.98)
+        parser.add_argument('-k', '--kl_targ', type=float, help='D_KL target value',
+        default=0.003)
+        parser.add_argument('-r', '--risk_targ', type=float, help='Risk target value or Constraint',
+        default = -40)
+        parser.add_argument('-b', '--batch_size', type=int,
+        help='Number of episodes per training batch',
+        default=20)
+        parser.add_argument('-m', '--hid1_mult', type=int,
+        help='Size of first hidden layer for value and policy NNs'
+                     '(integer multiplier of observation dimension)',
+                                             default=10)
+        parser.add_argument('-v', '--policy_logvar', type=float,
+        help='Initial policy log-variance (natural log of variance)',
+                    default=-1.0)
+        parser.add_argument('-vi', '--visualize', type=bool,
+        help='Visualize the training (needs to off for sshing).',
+                        default=False)
+        parser.add_argument('-pr', '--print_results', type=bool,
+        help='Plot histogram of final policy',
+                        default=False)
 
-                                                    args = parser.parse_args()
-                                                        main(**vars(args))
-
+        args = parser.parse_args()
+        main(**vars(args))
