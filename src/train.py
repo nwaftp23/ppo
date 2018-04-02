@@ -388,8 +388,6 @@ if __name__ == "__main__":
         default=0.98)
         parser.add_argument('-k', '--kl_targ', type=float, help='D_KL target value',
         default=0.003)
-        parser.add_argument('-r', '--risk_targ', type=float, help='Risk target value or Constraint',
-        default = -40)
         parser.add_argument('-b', '--batch_size', type=int,
         help='Number of episodes per training batch',
         default=20)
@@ -400,9 +398,6 @@ if __name__ == "__main__":
         parser.add_argument('-v', '--policy_logvar', type=float,
         help='Initial policy log-variance (natural log of variance)',
                     default=-1.0)
-        parser.add_argument('-vi', '--visualize', type=bool,
-        help='Visualize the training (needs to off for sshing).',
-                        default=False)
         parser.add_argument('-pr', '--print_results', type=bool,
         help='Plot histogram of final policy',
                         default=False)
