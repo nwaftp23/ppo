@@ -1,4 +1,4 @@
-"""
+n"""
 Logging and Data Scaling Utilities
 
 Written by Patrick Coady (pat-coady.github.io)
@@ -43,7 +43,7 @@ class Scaler(object):
             self.mean_rew = np.mean(r)
             self.var_rew = np.var(r)
             self.n = len(r)
-            print('Is n equal to n_rew', self.n == self.n_rew)
+            print('Is n equal to n_rew', self.n == self.n)
             self.first_pass = False
         else:
             m = x.shape[0]
@@ -59,13 +59,12 @@ class Scaler(object):
             m_rew = r.shape[0]
             new_data_var_rew = np.var(r, axis=0)
             new_data_mean_rew = np.mean(r, axis=0)
-            new_means_rew = ((self.mean_rew * self.n_rew) + (new_data_mean_rew * m_rew)) / (self.n_rew + m_rew)
-            self.var_rew = (((self.n_rew * (self.var_rew + np.square(self.mean_rew))) +
-                          (m_rew * (new_data_var_rew + np.square(new_data_mean_rew)))) / (self.n_rew + m_rew) -
+            new_means_rew = ((self.mean_rew * self.n) + (new_data_mean_rew * m_rew)) / (self.n + m_rew)
+            self.var_rew = (((self.n * (self.var_rew + np.square(self.mean_rew))) +
+                          (m_rew * (new_data_var_rew + np.square(new_data_mean_rew)))) / (self.n + m_rew) -
                          np.square(new_means_rew))
             print('Is variance less than 0', self.var_rew < 0)
             self.mean_rew = new_means_rew
-            self.n_rew += m_rew
             print('Is m equal to m_rew', m == m_rew)
 
 
