@@ -188,9 +188,12 @@ def add_disc_sum_rew(trajectories, gamma, mu, sig):
         trajectory['disc_sum_rew'] = disc_sum_rew
 
 def normalize_rew(trajectory, mu, sig):
-    print((trajectory['rewards']-mu))
-    print(sig)
-    rewards = (trajectory['rewards']-mu)/sig
+    print('point minus mu', (trajectory['rewards']-mu))
+    print('standard deviation is', sig)
+    if sig == 0:
+        rewards = (trajectory['rewards']-mu)
+    else:
+        rewards = (trajectory['rewards']-mu)/sig
     return rewards
 
 def add_value(trajectories, val_func):
