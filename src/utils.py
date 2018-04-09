@@ -1,4 +1,4 @@
-n"""
+"""
 Logging and Data Scaling Utilities
 
 Written by Patrick Coady (pat-coady.github.io)
