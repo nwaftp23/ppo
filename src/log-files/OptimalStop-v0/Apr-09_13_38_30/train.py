@@ -188,6 +188,8 @@ def add_disc_sum_rew(trajectories, gamma, mu, sig):
         trajectory['disc_sum_rew'] = disc_sum_rew
 
 def normalize_rew(trajectory, mu, sig):
+    print('point minus mu', (trajectory['rewards']-mu))
+    print('standard deviation is', sig)
     if sig == 0:
         rewards = (trajectory['rewards']-mu)
     else:
@@ -384,9 +386,6 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         plt.ylabel("Frequency")
         plt.savefig("RA_ppo.png")
         plt.close(fig)
-    if pickle:
-        with open('sum_rew_final_policy.pkl', 'wb') as f:
-            pickle.dump(sum_reww, f)
     logger.close()
     policy.close_sess()
     val_func.close_sess()
@@ -414,9 +413,6 @@ if __name__ == "__main__":
                     default=-1.0)
         parser.add_argument('-pr', '--print_results', type=bool,
         help='Plot histogram of final policy',
-                        default=False)
-        parser.add_argument('-pi', '--pickle_final', type=bool,
-        help='Pickle list of final policy rewards for check_final.py',
                         default=False)
 
         args = parser.parse_args()
