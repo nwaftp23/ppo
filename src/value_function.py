@@ -74,7 +74,7 @@ class NNValueFunction(object):
         batch_size = x.shape[0] // num_batches
         y_hat = self.predict(x)  # check explained variance prior to update
         if np.var(y) == 0:
-            old_exp_var = 0
+            old_exp_var = 1 - np.var(y - y_hat)
         else:
             old_exp_var = 1 - np.var(y - y_hat)/np.var(y)
         if self.replay_buffer_x is None:
@@ -95,7 +95,7 @@ class NNValueFunction(object):
         y_hat = self.predict(x)
         loss = np.mean(np.square(y_hat - y))         # explained variance after update
         if np.var(y) == 0:
-            exp_var = 0
+            exp_var = 1 - np.var(y - y_hat)
         else:
             exp_var = 1 - np.var(y - y_hat) / np.var(y)  # diagnose over-fitting of val func
 

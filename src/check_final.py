@@ -7,7 +7,7 @@ with open('sum_rew_final_policy.pkl','rb') as f:
 
 ch = np.array(li)
 catastrophes = np.sum(ch<-1080)
-opt = np.sum((ch>(max(li)-7))&(ch <= max(li)))
+opt = np.sum((ch>(max(li)-10))&(ch <= max(li)))
 print('first 300 rollouts')
 print(li[1:300])
 print('min rew', min(li))
