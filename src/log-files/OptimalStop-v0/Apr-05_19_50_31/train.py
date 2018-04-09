@@ -239,6 +239,8 @@ def add_gae(trajectories, gamma, lam, mu, sig):
         #    rewards = trajectory['rewards']
         '''0 mean 1 variance scaling'''
         rewards = normalize_rew(trajectory, mu, sig)
+        print(rewards)
+        input()
         values = trajectory['values']
         # temporal differences
         tds = rewards - values + np.append(values[1:] * gamma, 0)

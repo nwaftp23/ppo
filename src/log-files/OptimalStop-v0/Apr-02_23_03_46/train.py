@@ -188,8 +188,6 @@ def add_disc_sum_rew(trajectories, gamma, mu, sig):
         trajectory['disc_sum_rew'] = disc_sum_rew
 
 def normalize_rew(trajectory, mu, sig):
-    print((trajectory['rewards']-mu))
-    print(sig)
     rewards = (trajectory['rewards']-mu)/sig
     return rewards
 
@@ -326,8 +324,8 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         trajectories = run_policy(env, policy, scaler, logger, episodes=batch_size)
         episode += len(trajectories)
         add_value(trajectories, val_func)  # add estimated values to episodes
-        add_disc_sum_rew(trajectories, gamma, scaler.mean_rew, np.sqrt(scaler.var_rew))  # calculated discounted sum of Rs
-        add_gae(trajectories, gamma, lam, scaler.mean_rew, np.sqrt(scaler.var_rew))  # calculate advantage
+        add_disc_sum_rew(trajectories, gamma, scaler.mean_rew, scaler.var_rew)  # calculated discounted sum of Rs
+        add_gae(trajectories, gamma, lam, scaler.mean_rew, scaler.var_rew)  # calculate advantage
         disc0 = [t['disc_sum_rew'][0] for t in trajectories]
         # concatenate all episodes into single NumPy arrays
         observes, actions, advantages, disc_sum_rew = build_train_set(trajectories)

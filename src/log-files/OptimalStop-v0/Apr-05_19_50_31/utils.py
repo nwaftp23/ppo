@@ -27,6 +27,7 @@ class Scaler(object):
         self.mean_rew = 0
         self.var_rew = 0
         self.n = 0
+        self.n_rew = 0
         self.first_pass = True
 
     def update(self, x, r):
@@ -42,7 +43,8 @@ class Scaler(object):
             self.varss = np.var(x, axis=0)
             self.mean_rew = np.mean(r)
             self.var_rew = np.var(r)
-            self.n = len(r)
+            self.n = x.shape[0]
+            self.n_rew = len(r)
             print('Is n equal to n_rew', self.n == self.n_rew)
             self.first_pass = False
         else:
@@ -66,7 +68,7 @@ class Scaler(object):
             print('Is variance less than 0', self.var_rew < 0)
             self.mean_rew = new_means_rew
             self.n_rew += m_rew
-            print('Is m equal to m_rew', m == m_rew)
+            print('Is n equal to n_rew', self.n == self.n_rew)
 
 
 
