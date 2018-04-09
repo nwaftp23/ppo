@@ -292,7 +292,7 @@ def log_batch_stats(observes, actions, advantages, disc_sum_rew, logger, episode
                 })
 
 
-def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, policy_logvar, print_results):
+def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, policy_logvar, print_results, pickle):
     """ Main training loop
 
     Args:
@@ -415,7 +415,7 @@ if __name__ == "__main__":
         parser.add_argument('-pr', '--print_results', type=bool,
         help='Plot histogram of final policy',
                         default=False)
-        parser.add_argument('-pi', '--pickle_final', type=bool,
+        parser.add_argument('-pi', '--pickle', type=bool,
         help='Pickle list of final policy rewards for check_final.py',
                         default=False)
 
