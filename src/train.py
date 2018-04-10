@@ -309,8 +309,8 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
     env, obs_dim, act_dim = init_gym(env_name)
     obs_dim += 1  # add 1 to obs dimension for time step feature (see run_episode())
     now_utc = datetime.utcnow()  # create unique directories
-    now = str(now_utc.day) + '-' + now_utc.strftime('%b') + '-' + str(now_utc.year) + '_' + str((now_utc.hour-4)) + '.' + str(now_utc.minute) + '.' + str(now_utc.second) # adjust for Montreal Time Zone
-    print(now) 
+    now = str(now_utc.day) + '-' + now_utc.strftime('%b') + '-' + str(now_utc.year) + '_' + str(((now_utc.hour-4)%24)) + '.' + str(now_utc.minute) + '.' + str(now_utc.second) # adjust for Montreal Time Zone
+    print(now)
     logger = Logger(logname=env_name, now = now)
     aigym_path = os.path.join('/tmp', env_name, now)
     #env = wrappers.Monitor(env, aigym_path, force=True)

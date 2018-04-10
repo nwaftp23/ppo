@@ -84,7 +84,7 @@ class Logger(object):
         filenames = glob.glob('*.py')  # put copy of all python files in log_dir
         for filename in filenames:     # for reference
             shutil.copy(filename, self.path)
-        path = os.path.join(path, 'log.csv')
+        path = os.path.join(self.path, 'log.csv')
         print(path)
 
         self.write_header = True
@@ -131,7 +131,7 @@ class Logger(object):
 
     def final_log(self):
         ''' Logs every file that updates during learning and can't be logged in loop
-        
+
         '''
         graphs = glob.glob('*.png')
         pkl = glob.glob('*.pkl')
