@@ -80,12 +80,10 @@ class Logger(object):
         """
         self.path = os.path.join('log-files', logname, now)
         os.makedirs(self.path)
-        print(self.path)
         filenames = glob.glob('*.py')  # put copy of all python files in log_dir
         for filename in filenames:     # for reference
             shutil.copy(filename, self.path)
         path = os.path.join(self.path, 'log.csv')
-        print(path)
 
         self.write_header = True
         self.log_entry = {}

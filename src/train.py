@@ -392,6 +392,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         print('yolo')
         with open('sum_rew_final_policy.pkl', 'wb') as f:
             pickle.dump(sum_rewww, f)
+    logger.final_log()
     logger.close()
     policy.close_sess()
     val_func.close_sess()
