@@ -191,7 +191,7 @@ def normalize_rew(trajectory, mu, sig):
     if sig == 0:
         rewards = (trajectory['rewards'])
     else:
-        rewards = (trajectory['rewards'])/np.sqrt(sig)
+        rewards = (trajectory['rewards'])/sqrt(sig)
     return rewards
 
 def add_value(trajectories, val_func):

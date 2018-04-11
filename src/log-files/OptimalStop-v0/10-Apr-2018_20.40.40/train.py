@@ -191,7 +191,7 @@ def normalize_rew(trajectory, mu, sig):
     if sig == 0:
         rewards = (trajectory['rewards'])
     else:
-        rewards = (trajectory['rewards'])/np.sqrt(sig)
+        rewards = (trajectory['rewards'])/sig
     return rewards
 
 def add_value(trajectories, val_func):
@@ -310,6 +310,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
     obs_dim += 1  # add 1 to obs dimension for time step feature (see run_episode())
     now_utc = datetime.utcnow()  # create unique directories
     now = str(now_utc.day) + '-' + now_utc.strftime('%b') + '-' + str(now_utc.year) + '_' + str(((now_utc.hour-4)%24)) + '.' + str(now_utc.minute) + '.' + str(now_utc.second) # adjust for Montreal Time Zone
+    print(now)
     logger = Logger(logname=env_name, now = now)
     aigym_path = os.path.join('/tmp', env_name, now)
     #env = wrappers.Monitor(env, aigym_path, force=True)
@@ -340,7 +341,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         logger.write(display=True)  # write logger results to file and stdout
         kl_terms = np.append(kl_terms,policy.check_kl)
         if (episode % 20) == 0:
-            print('Running standard deviation after last mini batch is', scaler.var_rew)
+            print('standard deviation', scaler.var_rew)
         x1 = list(range(1,(len(kl_terms)+1)))
         rewards = plt.plot(x1,kl_terms)
         plt.title('Standard PPO')
@@ -378,7 +379,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
             plt.savefig("learning_curve2.png")
             plt.close()
     if print_results:
-        tr = run_policy(env, policy, scaler, logger, episodes=1000)
+        tr = run_policy(env, policy, scaler, logger, episodes=10)
         sum_rewww = [t['rewards'].sum() for t in tr]
         hist_dat = np.array(sum_rewww)
         fig = plt.hist(hist_dat,bins=2000, edgecolor='b', linewidth=1.2)
@@ -388,6 +389,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         plt.savefig("RA_ppo.png")
         plt.close()
     if picklee:
+        print('yolo')
         with open('sum_rew_final_policy.pkl', 'wb') as f:
             pickle.dump(sum_rewww, f)
     logger.final_log()
