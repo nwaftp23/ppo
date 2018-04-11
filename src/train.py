@@ -182,7 +182,7 @@ def add_disc_sum_rew(trajectories, gamma, mu, sig):
         #    rewards = trajectory['rewards'] * (1 - gamma)
         #else:
         #    rewards = trajectory['rewards']
-        '''0 mean 1 variance scaling'''
+        '''Standard deviation scaling'''
         rewards = normalize_rew(trajectory, mu, sig)
         disc_sum_rew = discount(rewards, gamma)
         trajectory['disc_sum_rew'] = disc_sum_rew
@@ -238,7 +238,7 @@ def add_gae(trajectories, gamma, lam, mu, sig):
         #    rewards = trajectory['rewards'] * (1 - gamma)
         #else:
         #    rewards = trajectory['rewards']
-        '''0 mean 1 variance scaling'''
+        '''standard deviation scaling'''
         rewards = normalize_rew(trajectory, mu, sig)
         values = trajectory['values']
         # temporal differences
@@ -292,7 +292,7 @@ def log_batch_stats(observes, actions, advantages, disc_sum_rew, logger, episode
                 })
 
 
-def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, policy_logvar, print_results, picklee):
+def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, policy_logvar, print_results):
     """ Main training loop
 
     Args:
@@ -385,11 +385,11 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         plt.title('Standard PPO')
         plt.xlabel("Sum of Rewards")
         plt.ylabel("Frequency")
-        plt.savefig("RA_ppo.png")
+        plt.savefig("standard_ppo.png")
         plt.close()
-    if picklee:
         with open('sum_rew_final_policy.pkl', 'wb') as f:
             pickle.dump(sum_rewww, f)
+        logger.final_log()
     logger.final_log()
     logger.close()
     policy.close_sess()
@@ -401,7 +401,7 @@ if __name__ == "__main__":
         parser = argparse.ArgumentParser(description=('Train policy on OpenAI Gym environment using Proximal Policy Optimizer'))
         parser.add_argument('-e','--env_name', type=str, help='OpenAI Gym environment name', default = 'OptimalStop-v0')
         parser.add_argument('-n', '--num_episodes', type=int, help='Number of episodes to run', default=2000)
-        parser.add_argument('-g', '--gamma', type=float, help='Discount factor', default=0.995)
+        parser.add_argument('-g', '--gamma', type=float, help='Discount factor', default=0.9995)
         parser.add_argument('-l', '--lam', type=float, help='Lambda for Generalized Advantage Estimation',
         default=0.98)
         parser.add_argument('-k', '--kl_targ', type=float, help='D_KL target value',
@@ -419,9 +419,7 @@ if __name__ == "__main__":
         parser.add_argument('-pr', '--print_results', type=bool,
         help='Plot histogram of final policy',
                         default=False)
-        parser.add_argument('-pi', '--picklee', type=bool,
-        help='Pickle list of final policy rewards for check_final.py',
-                        default=False)
+
 
         args = parser.parse_args()
         main(**vars(args))
