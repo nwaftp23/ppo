@@ -29,10 +29,8 @@ import matplotlib
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import Optimal_Stop
-import gym
+import monicars as mc
 import numpy as np
-from gym import wrappers
 from policy import Policy
 from value_function import NNValueFunction
 import scipy.signal
@@ -42,6 +40,8 @@ import os
 import argparse
 import signal
 import pickle
+import numbers
+import math
 
 
 class GracefulKiller:
@@ -55,27 +55,86 @@ class GracefulKiller:
         self.kill_now = True
 
 
-def init_gym(env_name):
+def init_env(env_name, **kwargs):
     """
-    Initialize gym environment, return dimension of observation
+    Initialize environment, return dimension of observation
     and action spaces.
 
     Args:
-        env_name: str environment name (e.g. "Humanoid-v1")
+        env_name: str environment name (e.g. "two_lanes_two_way")
 
     Returns: 3-tuple
         gym environment (object)
-        number of observation dimensions (int)
-        number of action dimensions (int)
     """
-    env = gym.make(env_name)
-    obs_dim = env.observation_space.shape[0]
-    act_dim = env.action_space.shape[0]
+    env = mc.Environment(env_name, **kwargs)
 
-    return env, obs_dim, act_dim
+    return env
 
 
-def run_episode(env, policy, scaler, animate=False):
+def move(x, y, heading, speed, acc):
+    '''moves an npc to a new position, right now only functions with acceleration actions
+
+    Args:
+        acc: acceleration to be applied
+        x: previous x position to iterate on
+        y: previous y position to iterate on
+        heading: the heading of the npc
+        speed: previous speed of the npc
+    Return:
+        List which represents new state of npc
+    '''
+    speed += acc
+    delta_x = speed * math.sin(heading)
+    delta_y = speed * math.cos(heading)    
+    x += delta_x
+    y += delta_y
+    return [x, y, heading, speed] 
+
+
+
+
+def tracks_cars_off_screen(prev_obs, actions):
+    '''Tracks cars off screen so that the observations do not go to zero
+
+    Args:
+        obs: list of current observations of npcs and agent
+        prev_obs: list of previous observations of just npcs
+        actions: list of actions for npcs
+    
+    Returns: 
+        list of new observations
+    '''
+    npcs_info = prev_obs[4:]
+    xs = npcs_info[0::4]
+    ys = npcs_info[1::4]
+    headings = npcs_info[2::4]
+    speeds = npcs_info[3::4]
+    new_npc_obs = []
+    for x, y, h, s, a in zip(xs, ys, headings, speeds, actions):
+        moved = move(x, y, h, s, a)
+        new_npc_obs += moved
+    return prev_obs[0:4]+new_npc_obs
+
+
+
+
+def distances(obs):
+    '''Calculates the agents distance to the obstacle
+
+    Args:
+        obs: list of current observations
+
+    Returns: 
+        float distance between agent and npc
+    '''
+    a = np.array(obs[0:2])
+    b = np.array(obs[4:6])
+    dist = np.linalg.norm(a-b)
+    return dist
+
+
+
+def run_episode(env, policy, scaler):
     """ Run single episode with option to animate
 
     Args:
@@ -83,15 +142,18 @@ def run_episode(env, policy, scaler, animate=False):
         policy: policy object with sample() method
         scaler: scaler object, used to scale/offset each observation dimension
             to a similar range
-        animate: boolean, True uses env.render() method to animate episode
 
     Returns: 4-tuple of NumPy arrays
         observes: shape = (episode len, obs_dim)
         actions: shape = (episode len, act_dim)
         rewards: shape = (episode len,)
         unscaled_obs: useful for training scaler, shape = (episode len, obs_dim)
+        unscaled_augie: useful for training scaler, shape = (episode len, obs_dim)
     """
     obs = env.reset()
+    dist = distances(obs)
+    obs += [dist]
+    obs = np.array(obs) # need to add general track cars when they go off the screen 
     observes, actions, rewards, unscaled_obs = [], [], [], []
     done = False
     step = 0.0
@@ -99,8 +161,6 @@ def run_episode(env, policy, scaler, animate=False):
     scale[-1] = 1.0  # don't scale time step feature
     offset[-1] = 0.0  # don't offset time step feature
     while not done:
-        if animate:
-            env.render()
         obs = obs.astype(np.float32).reshape((1, -1))
         obs = np.append(obs, [[step]], axis=1)  # add time step feature
         unscaled_obs.append(obs)
@@ -108,15 +168,33 @@ def run_episode(env, policy, scaler, animate=False):
         observes.append(obs)
         action = policy.sample(obs).reshape((1, -1)).astype(np.float32)
         actions.append(action)
-        obs, reward, done, _ = env.step(np.squeeze(action, axis=0))
-        if not isinstance(reward, float):
+        accel_rand = np.random.normal(0,0.05)
+        act = action.tolist()[0]
+        if len(act) == 1:
+            act += [0]
+        obs, reward, done = env.step(act, npc_action = [[accel_rand,0]])
+        if obs[4:] == [0,0,0,0]:
+            obs = tracks_cars_off_screen(prev_obs, [accel_rand])
+        if not env.on_road():
+            done = True
+            reward = -10000            
+        prev_obs = obs 
+        dist = distances(obs)
+        obs += [dist]
+        if env.collided():
+            done = True
+            reward = -10000
+        if obs[0] <= 10:
+            done = True
+            reward = -10000
+        #if obs[0] > 800:
+        #    done = True
+        obs = np.array(obs)
+        if not isinstance(reward, numbers.Real):
             reward = np.asscalar(reward)
         rewards.append(reward)
         step += 1e-3  # increment time step feature
-        '''bounding the number of steps that can be taken
-         this should be environment specific but it is to
-         prevent long episodes'''
-        if step == 1.5:
+        if step == 1.5: #bounding the number of steps that can be taken this should be environment specific but it is to prevent long episodes
     	    done = True
     return (np.concatenate(observes), np.concatenate(actions),
             np.array(rewards, dtype=np.float64), np.concatenate(unscaled_obs))
@@ -174,24 +252,21 @@ def add_disc_sum_rew(trajectories, gamma, mu, sig):
         None (mutates trajectories dictionary to add 'disc_sum_rew')
     """
     for trajectory in trajectories:
-		#Ideas for new scaling, why using gamma. Just set
-		#a pre determined factor like 0.01, can tray a few
-		#also try a normalization like suggested in the paper
-        '''Original Scaling'''
-        #if gamma < 0.999:  # don't scale for gamma ~= 1
-        #    rewards = trajectory['rewards'] * (1 - gamma)
-        #else:
-        #    rewards = trajectory['rewards']
-        '''Standard deviation scaling'''
-        rewards = normalize_rew(trajectory, mu, sig)
+        rewards = normalize_rew(trajectory, mu, sig, gamma)
         disc_sum_rew = discount(rewards, gamma)
         trajectory['disc_sum_rew'] = disc_sum_rew
 
-def normalize_rew(trajectory, mu, sig):
-    if sig == 0:
-        rewards = (trajectory['rewards'])
+def normalize_rew(trajectory, mu, sig, gamma, original = False):
+    if original:
+        if gamma < 0.999:  # don't scale for gamma ~= 1
+            rewards = trajectory['rewards'] * (1 - gamma)
+        else:
+            rewards = trajectory['rewards']
     else:
-        rewards = (trajectory['rewards'])/np.sqrt(sig)
+        if sig == 0:
+            rewards = (trajectory['rewards'])
+        else:
+            rewards = (trajectory['rewards'])/np.sqrt(sig)
     return rewards
 
 def add_value(trajectories, val_func):
@@ -231,15 +306,7 @@ def add_gae(trajectories, gamma, lam, mu, sig):
         None (mutates trajectories dictionary to add 'advantages')
     """
     for trajectory in trajectories:
-        # Lucas' correction
-        # try reward scaling suggested in the paper
-        '''Original Scaling'''
-        #if gamma < 0.999:  # don't scale for gamma ~= 1
-        #    rewards = trajectory['rewards'] * (1 - gamma)
-        #else:
-        #    rewards = trajectory['rewards']
-        '''standard deviation scaling'''
-        rewards = normalize_rew(trajectory, mu, sig)
+        rewards = normalize_rew(trajectory, mu, sig, gamma)
         values = trajectory['values']
         # temporal differences
         tds = rewards - values + np.append(values[1:] * gamma, 0)
@@ -261,13 +328,14 @@ def build_train_set(trajectories):
         disc_sum_rew: shape = (N,)
     """
     observes = np.concatenate([t['observes'] for t in trajectories])
+    unscaled_observes = np.concatenate([t['unscaled_obs'] for t in trajectories])
     actions = np.concatenate([t['actions'] for t in trajectories])
     disc_sum_rew = np.concatenate([t['disc_sum_rew'] for t in trajectories])
     advantages = np.concatenate([t['advantages'] for t in trajectories])
     # normalize advantages
     advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-6)
 
-    return observes, actions, advantages, disc_sum_rew
+    return observes, actions, advantages, disc_sum_rew, unscaled_observes
 
 
 def log_batch_stats(observes, actions, advantages, disc_sum_rew, logger, episode):
@@ -292,7 +360,7 @@ def log_batch_stats(observes, actions, advantages, disc_sum_rew, logger, episode
                 })
 
 
-def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, policy_logvar, print_results):
+def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, policy_logvar, print_results, act_dim, obs_dim, **kwargs):
     """ Main training loop
 
     Args:
@@ -306,13 +374,12 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         policy_logvar: natural log of initial policy variance
     """
     killer = GracefulKiller()
-    env, obs_dim, act_dim = init_gym(env_name)
+    env = init_env(env_name, **kwargs)
     obs_dim += 1  # add 1 to obs dimension for time step feature (see run_episode())
     now_utc = datetime.utcnow()  # create unique directories
     now = str(now_utc.day) + '-' + now_utc.strftime('%b') + '-' + str(now_utc.year) + '_' + str(((now_utc.hour-4)%24)) + '.' + str(now_utc.minute) + '.' + str(now_utc.second) # adjust for Montreal Time Zone
     logger = Logger(logname=env_name, now = now)
     aigym_path = os.path.join('/tmp', env_name, now)
-    #env = wrappers.Monitor(env, aigym_path, force=True)
     scaler = Scaler(obs_dim)
     val_func = NNValueFunction(obs_dim, hid1_mult)
     policy = Policy(obs_dim, act_dim, kl_targ, hid1_mult, policy_logvar)
@@ -332,32 +399,14 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         add_gae(trajectories, gamma, lam, scaler.mean_rew, np.sqrt(scaler.var_rew))  # calculate advantage
         disc0 = [t['disc_sum_rew'][0] for t in trajectories]
         # concatenate all episodes into single NumPy arrays
-        observes, actions, advantages, disc_sum_rew = build_train_set(trajectories)
+        observes, actions, advantages, disc_sum_rew, unscaled_observes = build_train_set(trajectories)
         # add various stats to training log:
         log_batch_stats(observes, actions, advantages, disc_sum_rew, logger, episode)
         policy.update(observes, actions, advantages, logger)  # update policy
         val_func.fit(observes, disc_sum_rew, logger)  # update value function
         logger.write(display=True)  # write logger results to file and stdout
-        kl_terms = np.append(kl_terms,policy.check_kl)
-        if (episode % 20) == 0:
-            print('Running standard deviation after last mini batch is', scaler.var_rew)
-        x1 = list(range(1,(len(kl_terms)+1)))
-        rewards = plt.plot(x1,kl_terms)
-        plt.title('Standard PPO')
-        plt.xlabel("Episode")
-        plt.ylabel("KL Divergence")
-        plt.savefig("KL_curve.png")
-        plt.close()
-        beta_terms = np.append(beta_terms,policy.beta)
-        x2 = list(range(1,(len(beta_terms)+1)))
-        mean_rewards = plt.plot(x2,beta_terms)
-        plt.title('Standard PPO')
-        plt.xlabel("Batch")
-        plt.ylabel("Beta Lagrange Multiplier")
-        plt.savefig("lagrange_beta_curve.png")
-        plt.close()
         if killer.kill_now:
-            if input('Terminate training (y/[n])? ') == 'y':
+            if raw_input('Terminate training (y/[n])? ') == 'y':
                 break
             killer.kill_now = False
         if print_results:
@@ -377,7 +426,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
             plt.ylabel("Mean of Last Batch")
             plt.savefig("learning_curve2.png")
             plt.close()
-    if print_results:
+    '''if print_results:
         tr = run_policy(env, policy, scaler, logger, episodes=1000)
         sum_rewww = [t['rewards'].sum() for t in tr]
         hist_dat = np.array(sum_rewww)
@@ -390,35 +439,8 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         with open('sum_rew_final_policy.pkl', 'wb') as f:
             pickle.dump(sum_rewww, f)
         logger.final_log()
+    '''
     logger.close()
     policy.close_sess()
     val_func.close_sess()
 
-
-
-if __name__ == "__main__":
-        parser = argparse.ArgumentParser(description=('Train policy on OpenAI Gym environment using Proximal Policy Optimizer'))
-        parser.add_argument('-e','--env_name', type=str, help='OpenAI Gym environment name', default = 'OptimalStop-v0')
-        parser.add_argument('-n', '--num_episodes', type=int, help='Number of episodes to run', default=2000)
-        parser.add_argument('-g', '--gamma', type=float, help='Discount factor', default=0.9995)
-        parser.add_argument('-l', '--lam', type=float, help='Lambda for Generalized Advantage Estimation',
-        default=0.98)
-        parser.add_argument('-k', '--kl_targ', type=float, help='D_KL target value',
-        default=0.003)
-        parser.add_argument('-b', '--batch_size', type=int,
-        help='Number of episodes per training batch',
-        default=20)
-        parser.add_argument('-m', '--hid1_mult', type=int,
-        help='Size of first hidden layer for value and policy NNs'
-                     '(integer multiplier of observation dimension)',
-                                             default=10)
-        parser.add_argument('-v', '--policy_logvar', type=float,
-        help='Initial policy log-variance (natural log of variance)',
-                    default=-1.0)
-        parser.add_argument('-pr', '--print_results', type=bool,
-        help='Plot histogram of final policy',
-                        default=False)
-
-
-        args = parser.parse_args()
-        main(**vars(args))

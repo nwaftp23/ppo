@@ -67,23 +67,23 @@ class Policy(object):
         """
         # hidden layer sizes determined by obs_dim and act_dim (hid2 is geometric mean)
         hid1_size = self.obs_dim * self.hid1_mult  # 10 empirically determined
-        hid3_size = self.act_dim * 10  # 10 empirically determined
+        hid3_size = self.act_dim * 5  # 10 empirically determined
         hid2_size = int(np.sqrt(hid1_size * hid3_size))
         # heuristic to set learning rate based on NN size (tuned on 'Hopper-v1')
         self.lr = 9e-4 / np.sqrt(hid2_size)  # 9e-4 empirically determined
         # 3 hidden layers with tanh activations
         out = tf.layers.dense(self.obs_ph, hid1_size, tf.tanh,
                               kernel_initializer=tf.random_normal_initializer(
-                                  stddev=np.sqrt(1 / self.obs_dim)), name="h1")
+                                  stddev=np.sqrt(2.0/self.obs_dim)), name="h1")#np.sqrt(1 / self.obs_dim)
         out = tf.layers.dense(out, hid2_size, tf.tanh,
                               kernel_initializer=tf.random_normal_initializer(
-                                  stddev=np.sqrt(1 / hid1_size)), name="h2")
+                                  stddev=np.sqrt(2.0/hid1_size)), name="h2")#np.sqrt(1 / hid1_size)
         out = tf.layers.dense(out, hid3_size, tf.tanh,
                               kernel_initializer=tf.random_normal_initializer(
-                                  stddev=np.sqrt(1 / hid2_size)), name="h3")
+                                  stddev=np.sqrt(2.0/hid2_size)), name="h3")#np.sqrt(1 / hid2_size)
         self.means = tf.layers.dense(out, self.act_dim,
                                      kernel_initializer=tf.random_normal_initializer(
-                                         stddev=np.sqrt(1 / hid3_size)), name="means")
+                                         stddev=np.sqrt(2.0/hid3_size)), name="means")#np.sqrt(1 / hid3_size)
         # logvar_speed is used to 'fool' gradient descent into making faster updates
         # to log-variances. heuristic sets logvar_speed based on network size.
         logvar_speed = (10 * hid3_size) // 48
@@ -181,6 +181,10 @@ class Policy(object):
                      self.lr_ph: self.lr * self.lr_multiplier}
         old_means_np, old_log_vars_np = self.sess.run([self.means, self.log_vars],
                                                       feed_dict)
+        print 'old means'
+        print old_means_np
+        print 'old log variances'
+        print old_log_vars_np
         feed_dict[self.old_log_vars_ph] = old_log_vars_np
         feed_dict[self.old_means_ph] = old_means_np
         loss, kl, entropy = 0, 0, 0
