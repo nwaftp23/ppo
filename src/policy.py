@@ -181,10 +181,6 @@ class Policy(object):
                      self.lr_ph: self.lr * self.lr_multiplier}
         old_means_np, old_log_vars_np = self.sess.run([self.means, self.log_vars],
                                                       feed_dict)
-        print 'old means'
-        print old_means_np
-        print 'old log variances'
-        print old_log_vars_np
         feed_dict[self.old_log_vars_ph] = old_log_vars_np
         feed_dict[self.old_means_ph] = old_means_np
         loss, kl, entropy = 0, 0, 0

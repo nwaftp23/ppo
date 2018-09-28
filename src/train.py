@@ -42,6 +42,7 @@ import signal
 import pickle
 import numbers
 import math
+from pytz import timezone
 
 
 class GracefulKiller:
@@ -72,7 +73,8 @@ def init_env(env_name, **kwargs):
 
 
 def move(x, y, heading, speed, acc):
-    '''moves an npc to a new position, right now only functions with acceleration actions
+    '''moves an npc to a new position, right now only functions with
+    acceleration actions
 
     Args:
         acc: acceleration to be applied
@@ -85,10 +87,10 @@ def move(x, y, heading, speed, acc):
     '''
     speed += acc
     delta_x = speed * math.sin(heading)
-    delta_y = speed * math.cos(heading)    
+    delta_y = speed * math.cos(heading)
     x += delta_x
     y += delta_y
-    return [x, y, heading, speed] 
+    return [x, y, heading, speed]
 
 
 
@@ -100,8 +102,8 @@ def tracks_cars_off_screen(prev_obs, actions):
         obs: list of current observations of npcs and agent
         prev_obs: list of previous observations of just npcs
         actions: list of actions for npcs
-    
-    Returns: 
+
+    Returns:
         list of new observations
     '''
     npcs_info = prev_obs[4:]
@@ -124,7 +126,7 @@ def distances(obs):
     Args:
         obs: list of current observations
 
-    Returns: 
+    Returns:
         float distance between agent and npc
     '''
     a = np.array(obs[0:2])
@@ -151,9 +153,7 @@ def run_episode(env, policy, scaler):
         unscaled_augie: useful for training scaler, shape = (episode len, obs_dim)
     """
     obs = env.reset()
-    dist = distances(obs)
-    obs += [dist]
-    obs = np.array(obs) # need to add general track cars when they go off the screen 
+    obs = np.array(obs) # need to add general track cars when they go off the screen
     observes, actions, rewards, unscaled_obs = [], [], [], []
     done = False
     step = 0.0
@@ -173,22 +173,9 @@ def run_episode(env, policy, scaler):
         if len(act) == 1:
             act += [0]
         obs, reward, done = env.step(act, npc_action = [[accel_rand,0]])
-        if obs[4:] == [0,0,0,0]:
-            obs = tracks_cars_off_screen(prev_obs, [accel_rand])
-        if not env.on_road():
-            done = True
-            reward = -10000            
-        prev_obs = obs 
+        prev_obs = obs
         dist = distances(obs)
-        obs += [dist]
-        if env.collided():
-            done = True
-            reward = -10000
-        if obs[0] <= 10:
-            done = True
-            reward = -10000
-        #if obs[0] > 800:
-        #    done = True
+        #obs += [dist]
         obs = np.array(obs)
         if not isinstance(reward, numbers.Real):
             reward = np.asscalar(reward)
@@ -360,7 +347,8 @@ def log_batch_stats(observes, actions, advantages, disc_sum_rew, logger, episode
                 })
 
 
-def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, policy_logvar, print_results, act_dim, obs_dim, **kwargs):
+def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult,
+         policy_logvar, print_results, act_dim, obs_dim, **kwargs):
     """ Main training loop
 
     Args:
@@ -370,14 +358,17 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         lam: lambda from Generalized Advantage Estimate
         kl_targ: D_KL target for policy update [D_KL(pi_old || pi_new)
         batch_size: number of episodes per policy training batch
-        hid1_mult: hid1 size for policy and value_f (mutliplier of obs dimension)
+        hid1_mult: hid1 size for policy and value_f
+        (mutliplier of obs dimension)
         policy_logvar: natural log of initial policy variance
     """
     killer = GracefulKiller()
     env = init_env(env_name, **kwargs)
-    obs_dim += 1  # add 1 to obs dimension for time step feature (see run_episode())
-    now_utc = datetime.utcnow()  # create unique directories
-    now = str(now_utc.day) + '-' + now_utc.strftime('%b') + '-' + str(now_utc.year) + '_' + str(((now_utc.hour-4)%24)) + '.' + str(now_utc.minute) + '.' + str(now_utc.second) # adjust for Montreal Time Zone
+    # add 1 to obs dimension for time step feature (see run_episode())
+    obs_dim += 1
+    tz = timezone('America/Montreal') # Montreal Timezone
+    dt = datetime.datetime.now(tz) # Create unique directories
+    now = dt.strftime('%Y-%m-%d %H_%M_%S')
     logger = Logger(logname=env_name, now = now)
     aigym_path = os.path.join('/tmp', env_name, now)
     scaler = Scaler(obs_dim)
@@ -392,16 +383,23 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         rew_graph = np.array([])
         mean_rew_graph = np.array([])
     while episode < num_episodes:
-        trajectories = run_policy(env, policy, scaler, logger, episodes=batch_size)
+        trajectories = run_policy(env, policy, scaler, logger,
+                                  episodes=batch_size)
         episode += len(trajectories)
-        add_value(trajectories, val_func)  # add estimated values to episodes
-        add_disc_sum_rew(trajectories, gamma, scaler.mean_rew, np.sqrt(scaler.var_rew))  # calculated discounted sum of Rs
-        add_gae(trajectories, gamma, lam, scaler.mean_rew, np.sqrt(scaler.var_rew))  # calculate advantage
+        # add estimated values to episodes
+        add_value(trajectories, val_func)
+        # calculated discounted sum of Rs
+        add_disc_sum_rew(trajectories, gamma, scaler.mean_rew,
+                         np.sqrt(scaler.var_rew))
+        add_gae(trajectories, gamma, lam, scaler.mean_rew,
+                np.sqrt(scaler.var_rew))  # calculate advantage
         disc0 = [t['disc_sum_rew'][0] for t in trajectories]
         # concatenate all episodes into single NumPy arrays
-        observes, actions, advantages, disc_sum_rew, unscaled_observes = build_train_set(trajectories)
+        observes, actions, advantages, disc_sum_rew, unscaled_observes =
+        build_train_set(trajectories)
         # add various stats to training log:
-        log_batch_stats(observes, actions, advantages, disc_sum_rew, logger, episode)
+        log_batch_stats(observes, actions, advantages, disc_sum_rew, logger,
+                        episode)
         policy.update(observes, actions, advantages, logger)  # update policy
         val_func.fit(observes, disc_sum_rew, logger)  # update value function
         logger.write(display=True)  # write logger results to file and stdout
@@ -426,7 +424,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
             plt.ylabel("Mean of Last Batch")
             plt.savefig("learning_curve2.png")
             plt.close()
-    '''if print_results:
+    if print_results:
         tr = run_policy(env, policy, scaler, logger, episodes=1000)
         sum_rewww = [t['rewards'].sum() for t in tr]
         hist_dat = np.array(sum_rewww)
@@ -439,8 +437,6 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
         with open('sum_rew_final_policy.pkl', 'wb') as f:
             pickle.dump(sum_rewww, f)
         logger.final_log()
-    '''
     logger.close()
     policy.close_sess()
     val_func.close_sess()
-
