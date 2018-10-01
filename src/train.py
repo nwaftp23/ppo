@@ -382,6 +382,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult,
     if print_results:
         rew_graph = np.array([])
         mean_rew_graph = np.array([])
+        dir = './log-files/' + env + '/' + now
     while episode < num_episodes:
         trajectories = run_policy(env, policy, scaler, logger,
                                   episodes=batch_size)
@@ -414,7 +415,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult,
             plt.title('Standard PPO')
             plt.xlabel("Episode")
             plt.ylabel("Discounted sum of rewards")
-            plt.savefig("learning_curve.png")
+            plt.savefig( (dir + "log-learning_curve.png"))
             plt.close()
             mean_rew_graph = np.append(mean_rew_graph,np.mean(disc0))
             x2 = list(range(1,(len(mean_rew_graph)+1)))
@@ -422,7 +423,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult,
             plt.title('Standard PPO')
             plt.xlabel("Batch")
             plt.ylabel("Mean of Last Batch")
-            plt.savefig("learning_curve2.png")
+            plt.savefig((dir + "learning_curve2.png"))
             plt.close()
     if print_results:
         tr = run_policy(env, policy, scaler, logger, episodes=1000)
@@ -432,9 +433,9 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult,
         plt.title('Standard PPO')
         plt.xlabel("Sum of Rewards")
         plt.ylabel("Frequency")
-        plt.savefig("standard_ppo.png")
+        plt.savefig((dir + "standard_ppo.png"))
         plt.close()
-        with open('sum_rew_final_policy.pkl', 'wb') as f:
+        with open((dir + 'sum_rew_final_policy.pkl'), 'wb') as f:
             pickle.dump(sum_rewww, f)
         logger.final_log()
     logger.close()
