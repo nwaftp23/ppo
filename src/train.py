@@ -422,10 +422,13 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult,
             plt.title('Standard PPO')
             plt.xlabel("Batch")
             plt.ylabel("Mean of Last Batch")
+            print(dir)
             plt.savefig((dir + "learning_curve2.png"))
             plt.close()
     if print_results:
+        print('running simulations')
         tr = run_policy(env, policy, scaler, logger, episodes=1000)
+        print('done')
         sum_rewww = [t['rewards'].sum() for t in tr]
         hist_dat = np.array(sum_rewww)
         fig = plt.hist(hist_dat,bins=2000, edgecolor='b', linewidth=1.2)
