@@ -396,8 +396,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult,
                 np.sqrt(scaler.var_rew))  # calculate advantage
         disc0 = [t['disc_sum_rew'][0] for t in trajectories]
         # concatenate all episodes into single NumPy arrays
-        observes, actions, advantages, disc_sum_rew, unscaled_observes =
-        build_train_set(trajectories)
+        observes, actions, advantages, disc_sum_rew, unscaled_observes = build_train_set(trajectories)
         # add various stats to training log:
         log_batch_stats(observes, actions, advantages, disc_sum_rew, logger,
                         episode)
