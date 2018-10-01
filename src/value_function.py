@@ -96,10 +96,6 @@ class NNValueFunction(object):
                              self.val_ph: y_train[start:end]}
                 _, l = self.sess.run([self.train_op, self.loss], feed_dict=feed_dict)
         y_hat = self.predict(x)
-        print 'y_hat is'
-        print y_hat
-        print 'y is'
-        print y 
         loss = np.mean(np.square(y_hat - y))         # explained variance after update
         if np.var(y) == 0:
             exp_var = 1 - np.var(y - y_hat)
