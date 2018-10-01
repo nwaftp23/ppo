@@ -367,7 +367,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult,
     # add 1 to obs dimension for time step feature (see run_episode())
     obs_dim += 1
     tz = timezone('America/Montreal') # Montreal Timezone
-    dt = datetime.datetime.now(tz) # Create unique directories
+    dt = datetime.now(tz) # Create unique directories
     now = dt.strftime('%Y-%m-%d %H_%M_%S')
     logger = Logger(logname=env_name, now = now)
     aigym_path = os.path.join('/tmp', env_name, now)
