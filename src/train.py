@@ -382,7 +382,7 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult,
     if print_results:
         rew_graph = np.array([])
         mean_rew_graph = np.array([])
-        dir = './log-files/' + env + '/' + now
+        dir = './log-files/' + env_name + '/' + now
     while episode < num_episodes:
         trajectories = run_policy(env, policy, scaler, logger,
                                   episodes=batch_size)
