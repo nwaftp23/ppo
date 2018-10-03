@@ -1,4 +1,3 @@
-#! /usr/bin/env python3
 """
 PPO: Proximal Policy Optimization
 
@@ -25,14 +24,18 @@ This implementation learns policies for continuous environments
 in the OpenAI Gym (https://gym.openai.com/). Testing was focused on
 the MuJoCo control tasks.
 """
+print('before all imports')
 import matplotlib
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import monicars as mc
 import numpy as np
+print('before policy import')
 from policy import Policy
+print('before value function import')
 from value_function import NNValueFunction
+print('post gpu imports')
 import scipy.signal
 from utils import Logger, Scaler
 from datetime import datetime
@@ -43,6 +46,8 @@ import pickle
 import numbers
 import math
 
+
+print('past imports of train')
 
 class GracefulKiller:
     """ Gracefully exit program on CTRL-C """
@@ -444,3 +449,5 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult, pol
     policy.close_sess()
     val_func.close_sess()
 
+
+print('end of train')

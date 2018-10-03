@@ -1,8 +1,11 @@
-## Proximal Policy Optimization with Generalized Advantage Estimation
+## Code for PPO
 
-By Patrick Coady: [Learning Artificial Intelligence](https://learningai.io/)
+Code adapted for MoniCars from Patrick Coady: [Learning Artificial Intelligence](https://learningai.io/ https://github.com/pat-coady/trpo)
+
 
 ### Summary
+
+Summary from Pat-Coady
 
 The same learning algorithm was used to train agents for each of the ten OpenAI Gym MuJoCo continuous control environments. The only difference between evaluations was the number of episodes used per training batch, otherwise all options were the same. The exact code used to generate the OpenAI Gym submissions is in the **`aigym_evaluation`** branch.
 
