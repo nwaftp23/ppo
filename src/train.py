@@ -160,6 +160,8 @@ def run_episode(env, policy, scaler):
     scale, offset = scaler.get()
     scale[-1] = 1.0  # don't scale time step feature
     offset[-1] = 0.0  # don't offset time step feature
+    crashy = env.npc_manager.npcs[0].crash*1
+    print(crashy)
     while not done:
         obs = obs.astype(np.float32).reshape((1, -1))
         obs = np.append(obs, [[step]], axis=1)  # add time step feature
@@ -184,7 +186,8 @@ def run_episode(env, policy, scaler):
         if step == 1.5: #bounding the number of steps that can be taken this should be environment specific but it is to prevent long episodes
     	    done = True
     return (np.concatenate(observes), np.concatenate(actions),
-            np.array(rewards, dtype=np.float64), np.concatenate(unscaled_obs), env.npc_manager[0].crash*1)
+            np.array(rewards, dtype=np.float64), np.concatenate(unscaled_obs), 
+            crashy)
 
 
 def run_policy(env, policy, scaler, logger, episodes):
@@ -350,7 +353,7 @@ def log_batch_stats(observes, actions, advantages, disc_sum_rew, logger, episode
 
 
 def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult,
-         policy_logvar, print_results, act_dim, obs_dim, **kwargs):
+         policy_logvar, print_results, act_dim, obs_dim, final_pol_test, **kwargs):
     """ Main training loop
 
     Args:
@@ -428,10 +431,11 @@ def main(env_name, num_episodes, gamma, lam, kl_targ, batch_size, hid1_mult,
             plt.close()
     if print_results:
         print('running simulations')
-        tr, tot_stuck = run_policy(env, policy, scaler, logger, episodes=1000)
+        tr, tot_stuck = run_policy(env, policy, scaler, logger, episodes=final_pol_test)
         print('done')
         sum_rewww = [t['rewards'].sum() for t in tr]
-        sum_rewww += tot_stuck
+        sum_rewww += [tot_stuck]
+        print('total stucks', sum_rewww[-1])
         hist_dat = np.array(sum_rewww)
         fig = plt.hist(hist_dat,bins=2000, edgecolor='b', linewidth=1.2)
         plt.title('Standard PPO')
