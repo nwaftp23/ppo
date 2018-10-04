@@ -62,6 +62,7 @@ class NNValueFunction(object):
             optimizer = tf.train.AdamOptimizer(self.lr)
             self.train_op = optimizer.minimize(self.loss)
             self.init = tf.global_variables_initializer()
+            self.saver = tf.train.Saver()
         self.sess = tf.Session(graph=self.g)
         self.sess.run(self.init)
 
@@ -95,6 +96,7 @@ class NNValueFunction(object):
                 feed_dict = {self.obs_ph: x_train[start:end, :],
                              self.val_ph: y_train[start:end]}
                 _, l = self.sess.run([self.train_op, self.loss], feed_dict=feed_dict)
+            self.saver.save(self.sess, './critic')
         y_hat = self.predict(x)
         loss = np.mean(np.square(y_hat - y))         # explained variance after update
         if np.var(y) == 0:

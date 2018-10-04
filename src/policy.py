@@ -42,6 +42,7 @@ class Policy(object):
             self._sample()
             self._loss_train_op()
             self.init = tf.global_variables_initializer()
+            self.saver = tf.train.Saver()
 
     def _placeholders(self):
         """ Input placeholders"""
@@ -188,6 +189,7 @@ class Policy(object):
             # TODO: need to improve data pipeline - re-feeding data every epoch
             self.sess.run(self.train_op, feed_dict)
             loss, kl, entropy = self.sess.run([self.loss, self.kl, self.entropy], feed_dict)
+            self.saver.save(self.sess, './actor') 
             if kl > self.kl_targ * 4:  # early stopping if D_KL diverges badly
                 break
         # TODO: too many "magic numbers" in next 8 lines of code, need to clean up

@@ -133,9 +133,11 @@ class Logger(object):
         '''
         graphs = glob.glob('*.png')
         pkl = glob.glob('*.pkl')
-        print(graphs)
-        print(pkl)
-        filenames = graphs + pkl
+        critic_nn = glob.glob('critic*')
+        actor_nn = glob.glob('actor*')
+        print(actor_nn)
+        print(critic_nn)
+        filenames = graphs + pkl + actor_nn + critic_nn
         print(filenames)
         for filename in filenames:     # for reference
             shutil.copy(filename, self.path)
